@@ -143,10 +143,23 @@ if selected_page == "Home":
         st.image("https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=1200&q=80", use_column_width=True, caption="Urban Atmosphere")
 
 elif selected_page == "AQI Forecast":
-    st.title(f"AQI Forecast for {selected_city}")
+    st.title(f"🌤️ AQI Forecast for {selected_city}")
     st.markdown(f"**Base Date:** {selected_date}")
     
-    if st.button("Generate Forecast"):
+    # AQI Scale Legend so users understand what the numbers mean
+    with st.expander("📊 What do AQI numbers mean? (Click to expand)"):
+        st.markdown("""
+        | AQI Range | Category | Health Impact | Color |
+        |-----------|----------|---------------|-------|
+        | 0 – 50 | **Good** | Minimal impact | 🟢 |
+        | 51 – 100 | **Satisfactory** | Minor breathing discomfort to sensitive people | 🟡 |
+        | 101 – 200 | **Moderate** | Breathing discomfort to people with lung/heart disease | 🟠 |
+        | 201 – 300 | **Poor** | Breathing discomfort to most people on prolonged exposure | 🔴 |
+        | 301 – 400 | **Very Poor** | Respiratory illness on prolonged exposure | 🟣 |
+        | 401 – 500+ | **Severe** | Affects healthy people. Serious impact on those with existing diseases | ⚫ |
+        """)
+    
+    if st.button("🔮 Generate Forecast"):
         if predictor and selected_city and selected_date:
             with st.spinner("Running LightGBM Models..."):
                 res = predictor.predict(selected_city, str(selected_date), save_csv=False)
@@ -156,36 +169,89 @@ elif selected_page == "AQI Forecast":
             else:
                 st.success("Forecast Generated Successfully!")
                 
-                # Display Metrics
+                # Helper to get category from AQI
+                def _cat(aqi):
+                    if aqi <= 50: return "Good"
+                    elif aqi <= 100: return "Satisfactory"
+                    elif aqi <= 200: return "Moderate"
+                    elif aqi <= 300: return "Poor"
+                    elif aqi <= 400: return "Very Poor"
+                    else: return "Severe"
+                
+                def _health_msg(cat):
+                    msgs = {
+                        "Good": "✅ Air quality is ideal. Enjoy outdoor activities!",
+                        "Satisfactory": "🙂 Air is acceptable. Sensitive individuals should be cautious.",
+                        "Moderate": "😷 People with respiratory/heart conditions should limit outdoor exertion.",
+                        "Poor": "⚠️ Everyone should reduce prolonged outdoor exertion. Avoid heavy exercise.",
+                        "Very Poor": "🚨 Avoid all outdoor physical activity. Keep windows closed.",
+                        "Severe": "🆘 HEALTH EMERGENCY! Stay indoors. Use air purifiers if available."
+                    }
+                    return msgs.get(cat, "")
+                
+                # Display forecasts with category and color
+                horizons = [
+                    ("Next 24 Hours", res.get('Predicted_AQI_24h')),
+                    ("Next 48 Hours", res.get('Predicted_AQI_48h')),
+                    ("Next 72 Hours", res.get('Predicted_AQI_72h'))
+                ]
+                
                 c1, c2, c3 = st.columns(3)
-                aqi_24 = res['Predicted_AQI_24h']
-                with c1: create_metric_card("24h Forecast", aqi_24, get_color_for_aqi(aqi_24))
-                with c2: create_metric_card("48h Forecast", res['Predicted_AQI_48h'])
-                with c3: create_metric_card("72h Forecast", res['Predicted_AQI_72h'])
+                for col, (label, aqi_val) in zip([c1, c2, c3], horizons):
+                    if aqi_val is not None:
+                        cat = _cat(aqi_val)
+                        color = get_color_for_aqi(aqi_val)
+                        with col:
+                            create_metric_card(label, f"{aqi_val}", color)
+                            st.markdown(f"<div style='text-align:center; font-size:18px; font-weight:bold; color:{color};'>{cat}</div>", unsafe_allow_html=True)
+                            st.caption(_health_msg(cat))
+                
+                st.markdown("---")
                 
                 # Risk Gauge
-                st.markdown("### Risk Level")
+                st.markdown("### 🎯 Overall Risk Assessment")
+                risk_val = res.get('Risk_Score_24h', 0)
                 fig = go.Figure(go.Indicator(
-                    mode = "gauge+number",
-                    value = res['Risk_Score_24h'],
-                    title = {'text': f"Risk Score (out of 10) - {res['AQI_Category_24h']}"},
+                    mode = "gauge+number+delta",
+                    value = risk_val,
+                    number = {'suffix': ' / 10'},
+                    title = {'text': f"Risk Score — {res.get('AQI_Category_24h', 'N/A')}"},
                     domain = {'x': [0, 1], 'y': [0, 1]},
                     gauge = {
-                        'axis': {'range': [None, 10]},
+                        'axis': {'range': [0, 10], 'tickwidth': 1},
                         'bar': {'color': "darkblue"},
                         'steps': [
-                            {'range': [0, 3], 'color': "green"},
-                            {'range': [3, 6], 'color': "yellow"},
-                            {'range': [6, 8], 'color': "orange"},
-                            {'range': [8, 10], 'color': "red"}],
+                            {'range': [0, 2], 'color': "#00E400"},
+                            {'range': [2, 4], 'color': "#FFFF00"},
+                            {'range': [4, 6], 'color': "#FF7E00"},
+                            {'range': [6, 8], 'color': "#FF0000"},
+                            {'range': [8, 10], 'color': "#7E0023"}],
+                        'threshold': {
+                            'line': {'color': "white", 'width': 4},
+                            'thickness': 0.75,
+                            'value': risk_val
+                        }
                     }
                 ))
+                fig.update_layout(template="plotly_dark", height=350)
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # Summary Box
+                aqi_24 = res.get('Predicted_AQI_24h', 0)
+                cat_24 = _cat(aqi_24)
+                if cat_24 in ['Severe', 'Very Poor']:
+                    st.error(f"🚨 **DANGER:** Air quality in {selected_city} is expected to be **{cat_24}** in the next 24 hours. {_health_msg(cat_24)}")
+                elif cat_24 in ['Poor', 'Moderate']:
+                    st.warning(f"⚠️ **CAUTION:** Air quality in {selected_city} is expected to be **{cat_24}** in the next 24 hours. {_health_msg(cat_24)}")
+                else:
+                    st.success(f"✅ **ALL CLEAR:** Air quality in {selected_city} is expected to be **{cat_24}** in the next 24 hours. {_health_msg(cat_24)}")
+                
+                st.markdown("---")
                 
                 # Download CSV
                 csv_data = pd.DataFrame([res]).to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label="Download Forecast (CSV)",
+                    label="📥 Download Forecast (CSV)",
                     data=csv_data,
                     file_name=f'forecast_{selected_city}_{selected_date}.csv',
                     mime='text/csv'
