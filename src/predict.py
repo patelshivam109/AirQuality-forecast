@@ -88,17 +88,20 @@ class AQIPredictor:
         url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia"
         
         try:
-            resp = requests.get(url, timeout=5)
+            resp = requests.get(url, timeout=15)
             if resp.status_code == 200:
                 data = resp.json().get('current', {})
+                def safe_float(val, default):
+                    return float(val) if val is not None else default
+                    
                 return {
-                    'pm2_5': float(data.get('pm2_5', 45.0)),
-                    'pm10': float(data.get('pm10', 95.0)),
-                    'no2': float(data.get('nitrogen_dioxide', 25.0)),
-                    'so2': float(data.get('sulphur_dioxide', 12.0)),
-                    'co': float(data.get('carbon_monoxide', 0.8)),
-                    'o3': float(data.get('ozone', 30.0)),
-                    'nh3': float(data.get('ammonia', 10.0)),
+                    'pm2_5': safe_float(data.get('pm2_5'), 45.0),
+                    'pm10': safe_float(data.get('pm10'), 95.0),
+                    'no2': safe_float(data.get('nitrogen_dioxide'), 25.0),
+                    'so2': safe_float(data.get('sulphur_dioxide'), 12.0),
+                    'co': safe_float(data.get('carbon_monoxide'), 0.8),
+                    'o3': safe_float(data.get('ozone'), 30.0),
+                    'nh3': safe_float(data.get('ammonia'), 10.0),
                     'source': 'Live Open-Meteo Cloud API'
                 }
         except Exception as e:
