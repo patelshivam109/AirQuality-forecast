@@ -81,8 +81,84 @@ class AQIPredictor:
 
     def fetch_live_air_quality(self, city):
         """
-        Fetches current real-time pollutant measurements for a city via Open-Meteo API.
+        Fetches real-time pollutant measurements.
+        Priority 1: Scrape aqi.in directly to perfectly match ground station data.
+        Priority 2: Open-Meteo Cloud API (Satellite estimates)
+        Priority 3: Offline Dataset Baseline
         """
+        # --- PRIORITY 1: Scrape AQI.in Ground Station Data ---
+        try:
+            from bs4 import BeautifulSoup
+            import re
+            
+            # Map all dataset cities to their aqi.in URL paths
+            city_paths = {
+                'ahmedabad': 'gujarat/ahmedabad',
+                'aizawl': 'mizoram/aizawl',
+                'amaravati': 'andhra-pradesh/amaravati',
+                'amritsar': 'punjab/amritsar',
+                'bengaluru': 'karnataka/bengaluru',
+                'bhopal': 'madhya-pradesh/bhopal',
+                'brajrajnagar': 'odisha/brajrajnagar',
+                'chandigarh': 'chandigarh/chandigarh',
+                'chennai': 'tamil-nadu/chennai',
+                'coimbatore': 'tamil-nadu/coimbatore',
+                'delhi': 'delhi/new-delhi',
+                'ernakulam': 'kerala/ernakulam',
+                'gurugram': 'haryana/gurugram',
+                'guwahati': 'assam/guwahati',
+                'hyderabad': 'telangana/hyderabad',
+                'jaipur': 'rajasthan/jaipur',
+                'jorapokhar': 'jharkhand/jorapokhar',
+                'kochi': 'kerala/kochi',
+                'kolkata': 'west-bengal/kolkata',
+                'lucknow': 'uttar-pradesh/lucknow',
+                'mumbai': 'maharashtra/mumbai',
+                'patna': 'bihar/patna',
+                'shillong': 'meghalaya/shillong',
+                'talcher': 'odisha/talcher',
+                'thiruvananthapuram': 'kerala/thiruvananthapuram',
+                'visakhapatnam': 'andhra-pradesh/visakhapatnam'
+            }
+            city_query = city.lower().strip()
+            path = city_paths.get(city_query)
+            
+            if path:
+                url = f"https://www.aqi.in/in/dashboard/india/{path}"
+                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                resp = requests.get(url, headers=headers, timeout=10)
+            
+                if resp.status_code == 200:
+                    soup = BeautifulSoup(resp.text, 'html.parser')
+                    txt = ''.join([t.text for t in soup.find_all('div', class_='pollutants-list')])
+                    
+                    if txt:
+                        pm25 = re.search(r'\(PM₂\.₅\)(\d+)', txt)
+                        pm10 = re.search(r'\(PM₁₀\)(\d+)', txt)
+                        no2 = re.search(r'\(NO₂\)(\d+)', txt)
+                        so2 = re.search(r'\(SO₂\)(\d+)', txt)
+                        co = re.search(r'\(CO\)(\d+)', txt)
+                        o3 = re.search(r'\(O₃\)(\d+)', txt)
+                        
+                        if pm25 or pm10:
+                            # Get baseline for missing fields (like NH3)
+                            city_rows = self.df[self.df['city'] == city]
+                            base = city_rows.sort_values('date').iloc[-1] if not city_rows.empty else self.df.iloc[-1]
+                            
+                            return {
+                                'pm2_5': float(pm25.group(1)) if pm25 else float(base.get('pm2_5', 45.0)),
+                                'pm10': float(pm10.group(1)) if pm10 else float(base.get('pm10', 95.0)),
+                                'no2': float(no2.group(1)) if no2 else float(base.get('no2', 25.0)),
+                                'so2': float(so2.group(1)) if so2 else float(base.get('so2', 12.0)),
+                                'co': float(co.group(1)) if co else float(base.get('co', 0.8)),
+                                'o3': float(o3.group(1)) if o3 else float(base.get('o3', 30.0)),
+                                'nh3': float(base.get('nh3', 10.0)),
+                                'source': f'Live CPCB Station (aqi.in)'
+                            }
+        except Exception as e:
+            print(f"AQI.in scraping failed: {e}")
+
+        # --- PRIORITY 2: Open-Meteo Satellite API ---
         coords = CITY_COORDINATES.get(city, (28.6139, 77.2090)) # Default to Delhi if unknown
         lat, lon = coords
         url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia"
