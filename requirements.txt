@@ -1,1 +1,10 @@
-# Project Dependencies
+streamlit==1.42.0
+pandas==2.2.3
+numpy==2.2.2
+scikit-learn==1.6.1
+lightgbm==4.5.0
+plotly==6.0.0
+beautifulsoup4==4.13.3
+requests==2.32.3
+shap==0.46.0
+python-docx==1.2.0
