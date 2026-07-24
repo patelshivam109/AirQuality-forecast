@@ -7,4 +7,3 @@ plotly
 beautifulsoup4
 requests
 shap
-python-docx
