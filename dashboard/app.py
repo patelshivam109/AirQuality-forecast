@@ -293,13 +293,13 @@ st.sidebar.markdown("""
 
 data_mode = st.sidebar.radio(
     "Execution Mode",
-    ["🔴 Live Real-Time Forecast (Today)", "📜 Historical Dataset Explorer"],
+    [" Live Real-Time Forecast (Today)", "📜 Historical Dataset Explorer"],
     key="data_mode_radio"
 )
 
 st.sidebar.markdown('<div style="height: 8px;"></div>', unsafe_allow_html=True)
 
-pages = ["Overview", "AQI Forecast", "Pollution Analytics", "Trend Analysis", "Risk Assessment", "Alert System", "Model Diagnostics", "System Info"]
+pages = ["Overview", "AQI Forecast", "Important Plots", "Pollution Analytics", "Trend Analysis", "Risk Assessment", "Alert System", "Model Diagnostics", "System Info"]
 selected_page = st.sidebar.radio("Navigation", pages, label_visibility="collapsed")
 
 # Global Filters based on mode
@@ -372,7 +372,6 @@ if selected_page == "Overview":
             res, _ = predictor.predict_live(selected_city)
             col_l, col_r = st.columns([2, 1])
             with col_l:
-                st.markdown('<div class="bento-card">', unsafe_allow_html=True)
                 st.markdown("### Today's Live Pollutant Footprint")
                 pollutants = ['pm2_5', 'pm10', 'no2', 'nh3', 'so2', 'co', 'o3']
                 vals = [float(live_data.get(p, 0)) for p in pollutants]
@@ -390,28 +389,27 @@ if selected_page == "Overview":
                 ))
                 fig = plotly_theme(fig, height=360)
                 st.plotly_chart(fig, width="stretch")
-                st.markdown('</div>', unsafe_allow_html=True)
                 
             with col_r:
-                st.markdown('<div class="bento-card" style="height: 100%;">', unsafe_allow_html=True)
-                st.markdown("### Tomorrow's Forecasted AQI")
                 aqi_24 = res.get('Predicted_AQI_24h') if res else 0.0
                 if aqi_24 is None: aqi_24 = 0.0
                 cat_name, cat_color, _, advice = get_aqi_meta(aqi_24)
                 st.markdown(f"""
-                <div style="margin-top: 16px;">
-                    <div style="font-size: 46px; font-weight: 800; font-family: 'JetBrains Mono'; color: {cat_color}; line-height: 1;">
-                        {aqi_24:.0f}
-                    </div>
-                    <div style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-top: 8px;">
-                        {cat_name} Category
-                    </div>
-                    <div style="font-size: 13px; color: #94a3b8; margin-top: 12px; line-height: 1.6;">
-                        {advice}
+                <div class="bento-card" style="height: 100%;">
+                    <h3 style="margin-top: 0;">Tomorrow's Forecasted AQI</h3>
+                    <div style="margin-top: 16px;">
+                        <div style="font-size: 46px; font-weight: 800; font-family: 'JetBrains Mono'; color: {cat_color}; line-height: 1;">
+                            {aqi_24:.0f}
+                        </div>
+                        <div style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-top: 8px;">
+                            {cat_name} Category
+                        </div>
+                        <div style="font-size: 13px; color: #94a3b8; margin-top: 12px; line-height: 1.6;">
+                            {advice}
+                        </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
     else:
         # Historical mode
         if not df.empty and selected_city and selected_date:
@@ -546,6 +544,33 @@ elif selected_page == "AQI Forecast":
                                 <div style="font-size: 14px; font-weight: 700; color: #f8fafc;">{cat_name}</div>
                             </div>
                             """, unsafe_allow_html=True)
+
+# ----------------------------------------------------------------------------
+# 3. IMPORTANT PLOTS
+# ----------------------------------------------------------------------------
+elif selected_page == "Important Plots":
+    st.markdown("## Important EDA & Relationship Plots")
+    if not df.empty:
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("### Pollutant Correlation Heatmap")
+            cols_to_corr = ['aqi', 'pm2_5', 'pm10', 'no2', 'so2', 'co', 'o3', 'nh3']
+            corr_df = df[[c for c in cols_to_corr if c in df.columns]].corr()
+            fig_corr = px.imshow(corr_df, text_auto=True, aspect="auto", color_continuous_scale='RdBu_r')
+            fig_corr = plotly_theme(fig_corr, height=400)
+            st.plotly_chart(fig_corr, width="stretch", use_container_width=True)
+            
+        with c2:
+            st.markdown("### AQI Distribution Across Cities")
+            fig_box = px.box(df, x='city', y='aqi', color='city', points="all")
+            fig_box = plotly_theme(fig_box, height=400)
+            fig_box.update_layout(showlegend=False)
+            st.plotly_chart(fig_box, width="stretch", use_container_width=True)
+            
+        st.markdown("### PM2.5 vs AQI Impact")
+        fig_scatter = px.scatter(df, x='pm2_5', y='aqi', color='aqi', color_continuous_scale='Turbo', hover_data=['city', 'date'])
+        fig_scatter = plotly_theme(fig_scatter, height=400)
+        st.plotly_chart(fig_scatter, width="stretch", use_container_width=True)
 
 # ----------------------------------------------------------------------------
 # 3. POLLUTION ANALYTICS
