@@ -196,9 +196,9 @@ footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================================
+
 # DATA & INGESTION
-# ============================================================================
+
 @st.cache_data
 def load_data():
     try:
@@ -263,9 +263,9 @@ def plotly_theme(fig, height=380):
     )
     return fig
 
-# ============================================================================
+
 # SIDEBAR NAVIGATION & MODES
-# ============================================================================
+
 st.sidebar.markdown("""
 <div style="padding: 20px 16px 16px 16px;">
     <div style="display: flex; align-items: center; gap: 12px;">
@@ -318,9 +318,9 @@ if not df.empty:
 else:
     selected_city, selected_date = None, None
 
-# ============================================================================
+
 # TOP NAV HEADER BAR
-# ============================================================================
+
 mode_label = "LIVE REAL-TIME INFERENCE (TODAY)" if "Live" in data_mode else "HISTORICAL DATASET SIMULATION"
 st.markdown(f"""
 <div class="top-nav">
@@ -337,16 +337,12 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ============================================================================
 # PAGES
-# ============================================================================
 
-# ----------------------------------------------------------------------------
 # 1. OVERVIEW (HOME)
-# ----------------------------------------------------------------------------
 if selected_page == "Overview":
     if "Live" in data_mode:
-        st.markdown(f"### 🔴 Live Real-Time Overview — {selected_city}")
+        st.markdown(f"### => Live Real-Time Overview — {selected_city}")
         if predictor:
             live_data = predictor.fetch_live_air_quality(selected_city)
             c1, c2, c3, c4 = st.columns(4)
@@ -434,16 +430,14 @@ if selected_page == "Overview":
                         </div>
                         """, unsafe_allow_html=True)
 
-# ----------------------------------------------------------------------------
 # 2. AQI FORECAST
-# ----------------------------------------------------------------------------
 elif selected_page == "AQI Forecast":
     st.markdown("## Multi-Horizon AQI Forecast Engine")
     
     if "Live" in data_mode:
         st.markdown(f"Running **Real-Time Live Forecast** for **{selected_city}** starting **Today ({selected_date})**.")
         
-        with st.expander("🛠️ Customize Live Pollutant Reading (What-If Simulation)"):
+        with st.expander(" Customize Live Pollutant Reading (What-If Simulation)"):
             st.markdown("Adjust today's pollutant levels below to see how the AI model recalculates future 24h, 48h, and 72h forecasts:")
             c_s1, c_s2, c_s3 = st.columns(3)
             with c_s1:
@@ -544,10 +538,8 @@ elif selected_page == "AQI Forecast":
                                 <div style="font-size: 14px; font-weight: 700; color: #f8fafc;">{cat_name}</div>
                             </div>
                             """, unsafe_allow_html=True)
-
-# ----------------------------------------------------------------------------
+ 
 # 3. IMPORTANT PLOTS
-# ----------------------------------------------------------------------------
 elif selected_page == "Important Plots":
     st.markdown("## Important EDA & Relationship Plots")
     if not df.empty:
@@ -572,9 +564,8 @@ elif selected_page == "Important Plots":
         fig_scatter = plotly_theme(fig_scatter, height=400)
         st.plotly_chart(fig_scatter, width="stretch", use_container_width=True)
 
-# ----------------------------------------------------------------------------
 # 3. POLLUTION ANALYTICS
-# ----------------------------------------------------------------------------
+
 elif selected_page == "Pollution Analytics":
     st.markdown("## Chemical & Particulate Composition Analytics")
     if not df.empty and selected_city:
@@ -598,9 +589,7 @@ elif selected_page == "Pollution Analytics":
             st.plotly_chart(fig2, width="stretch")
             st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------------------------------------------------------------------
 # 4. TREND ANALYSIS
-# ----------------------------------------------------------------------------
 elif selected_page == "Trend Analysis":
     st.markdown("## Longitudinal Time-Series Trends")
     if not df.empty and selected_city:
@@ -611,9 +600,7 @@ elif selected_page == "Trend Analysis":
         st.plotly_chart(fig, width="stretch")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------------------------------------------------------------------
 # 5. RISK ASSESSMENT
-# ----------------------------------------------------------------------------
 elif selected_page == "Risk Assessment":
     st.markdown("## Environmental Risk Matrix")
     if predictor and selected_city:
@@ -638,9 +625,8 @@ elif selected_page == "Risk Assessment":
         else:
             st.warning(f"No risk assessment data available for {selected_city} on {selected_date}.")
 
-# ----------------------------------------------------------------------------
+
 # 6. ALERT SYSTEM
-# ----------------------------------------------------------------------------
 elif selected_page == "Alert System":
     st.markdown("## Automated Health Advisory & Alert Dispatcher")
     if predictor and selected_city:
@@ -664,9 +650,9 @@ elif selected_page == "Alert System":
         else:
             st.warning(f"No advisory data available for {selected_city} on {selected_date}.")
 
-# ----------------------------------------------------------------------------
+
 # 7. MODEL DIAGNOSTICS
-# ----------------------------------------------------------------------------
+
 elif selected_page == "Model Diagnostics":
     st.markdown("## LightGBM Feature Importance Diagnostics")
     if predictor and '24h' in predictor.models:
@@ -685,9 +671,9 @@ elif selected_page == "Model Diagnostics":
                 st.plotly_chart(fig, width="stretch")
                 st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------------------------------------------------------------------
+
 # 8. SYSTEM INFO
-# ----------------------------------------------------------------------------
+
 elif selected_page == "System Info":
     st.markdown("## Platform Architecture & Technical Stack")
     st.markdown("""
