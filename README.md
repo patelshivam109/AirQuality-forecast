@@ -16,7 +16,7 @@ The system uses machine learning-based regression algorithms (LightGBM), real-ti
 - **Health Advisories**: Dispatches automated, targeted safety recommendations (e.g., "Stay Indoors", "Wear N95 Mask", "Normal Activity").
 - **Premium Bento Grid Dashboard**: Features a modern, highly responsive Streamlit user interface inspired by premium web design standards.
 - **Explainable AI (SHAP)**: Provides feature importance charts to explain which specific pollutants are driving the model's AQI predictions.
-- **Interactive EDA**: Visualize historical trends, pollutant correlation heatmaps, and city-wise AQI distribution boxplots using Plotly.
+- **Interactive EDA**: Visualize historical trends, pollutant correlation heatmaps, and city-wise AQI distribution boxplots using Plotly..
 
 ## Project Structure
 
